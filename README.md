@@ -1,2 +1,2 @@
 # detect_hedges
-A lexicon- and rule-based algorithm for detecting hedges in a sentence
+This code predicts if a sentence is hedged or not
