@@ -1,2 +1,3 @@
-# detect_hedges
-This code predicts if a sentence is hedged or not
+# Hedge Detection
+This repo includes a lexicon-based and rule-based algorithm for detecting hedges for sentences and paragraphs.
+
