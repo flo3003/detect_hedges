@@ -8,30 +8,7 @@
 
 import stanza
 from os.path import expanduser
-
-
-def jaccard_similarity(A, B):
-    A = set(A)
-    B = set(B)
-    #Find intersection of two sets
-    nominator = A.intersection(B)
-
-    #Find union of two sets
-    denominator = A.union(B)
-
-    #Take the ratio of sizes
-    similarity = len(nominator)/len(denominator)
-    
-    return similarity
-
-def txt2list(filename):
-    txt_file = open(filename, "r")
-    file_content = txt_file.read()
-
-    content_list = file_content.split("\n")
-    txt_file.close()
-
-    return content_list
+from utils import txt2list, jaccard_similarity
 
 def isTrueHedgeTerm(t, doc_dicts, ids):
     # rule-based algorithm
@@ -141,7 +118,7 @@ def isTrueHedgeTerm(t, doc_dicts, ids):
         return False
     
 def isHedgedSentence(sentence):
-    doc = nlp(sentence)
+    doc = nlp_s(sentence)
     doc_dicts = doc.sentences[0].to_dict()
     try:
         P = [doc_dict['lemma'] for doc_dict in doc_dicts]
@@ -183,6 +160,17 @@ def isHedgedSentence(sentence):
             
     return status
 
+def hedge_percentage(text, is_sentence = False):
+    doc = nlp_p(text)
+    list_hedges = []
+    if is_sentence:
+        return float(self.isHedgedSentence(text))
+    for i, sentence in enumerate(doc.sentences):
+        list_hedges.append(isHedgedSentence(sentence.text))
+    
+    return sum(list_hedges)/len(list_hedges)
+
+
 home = expanduser("~")
 directory = home+'/Documents/detect_hedges/'
 DM = txt2list(directory+"resources/discourse_markers.txt") # List of discourse markers
@@ -191,7 +179,8 @@ HG2 = txt2list(directory+"resources/propositional_hedges.txt")
 HG3 = txt2list(directory+"resources/relational_hedges.txt")
 HG = list(set(HG1+HG2+HG3))
 B = txt2list(directory+"resources/booster_words.txt") # List of booster words
-nlp = stanza.Pipeline('en')
+nlp_s = stanza.Pipeline(lang='en')
+nlp_p = stanza.Pipeline(lang='en', processors='tokenize')
 
 
 # Ambiguous examples: 

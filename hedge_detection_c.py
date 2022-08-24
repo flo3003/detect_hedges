@@ -1,11 +1,10 @@
 
 import stanza
 from os.path import expanduser
-
+from utils import txt2list, jaccard_similarity
 class Load_Lexicons:
 
     home = expanduser("~")
-    # directory = home+'/Documents/detect_hedges/resources/'
     def __init__(self, directory = home+'/Documents/detect_hedges/resources/'): 
         self.directory = directory
         self.DM_dir = self.directory+"discourse_markers.txt"
@@ -15,59 +14,34 @@ class Load_Lexicons:
         self.B_dir = self.directory+"booster_words.txt"
 
 
-    def txt2list(self, filename):
-        txt_file = open(filename, "r")
-        file_content = txt_file.read()
-
-        content_list = file_content.split("\n")
-        txt_file.close()
-
-        return content_list
-
-    def load(self):
-        DM = self.txt2list(self.DM_dir) # List of discourse markers
-        HG1 = self.txt2list(self.HG1_dir) # List of hedge words
-        HG2 = self.txt2list(self.HG2_dir)
-        HG3 = self.txt2list(self.HG3_dir)
+    def load(self) -> list:
+        DM = txt2list(self.DM_dir) # List of discourse markers
+        HG1 = txt2list(self.HG1_dir) # List of hedge words
+        HG2 = txt2list(self.HG2_dir)
+        HG3 = txt2list(self.HG3_dir)
         HG = list(set(HG1+HG2+HG3))
-        B = self.txt2list(self.B_dir) # List of booster words
-        nlp = stanza.Pipeline('en')
-        lexicons = [DM, HG, B, nlp]
+        B = txt2list(self.B_dir) # List of booster words
+        lexicons = [DM, HG, B]
 
         return lexicons
 
-
-
-class Detect_Hedges:
+class Hedge_Detector:
     '''
     class variables: shared variables shared among the class
     instance variables: 
     directory, lexicons, stanza pipeline
     '''
     # class attributes
-    def __init__(self, lexicons): 
+    def __init__(self, lexicons: list): 
 
         self.DM = lexicons[0]
         self.HG = lexicons[1]
         self.B = lexicons[2]
-        self.nlp = lexicons[3]
-
-    def jaccard_similarity(self, word1, word2):
-        word1 = set(word1)
-        word2 = set(word2)
-        #Find intersection of two sets
-        nominator = word1.intersection(word2)
-
-        #Find union of two sets
-        denominator = word1.union(word2)
-
-        #Take the ratio of sizes
-        similarity = len(nominator)/len(denominator)
-        
-        return similarity
+        self.nlp_s = stanza.Pipeline(lang='en')
+        self.nlp_p = stanza.Pipeline(lang='en', processors='tokenize')
 
 
-    def isTrueHedgeTerm(self, t, doc_dicts, ids):
+    def isTrueHedgeTerm(self, t: str, doc_dicts: dict, ids: list) -> bool:
         # rule-based algorithm
         
         true_hedge = False
@@ -175,8 +149,8 @@ class Detect_Hedges:
             return False
 
 
-    def isHedgedSentence(self, sentence):
-        doc = self.nlp(sentence)
+    def isHedgedSentence(self, sentence: str) -> bool:
+        doc = self.nlp_s(sentence)
         doc_dicts = doc.sentences[0].to_dict()
         try:
             P = [doc_dict['lemma'] for doc_dict in doc_dicts]
@@ -194,7 +168,7 @@ class Detect_Hedges:
 
         for word1 in self.DM:
             for word2 in P:
-                if 1 - self.jaccard_similarity(word1, word2) >= threshold:
+                if 1 - jaccard_similarity(word1, word2) >= threshold:
                     status = True
 
         for booster in self.B:
@@ -218,9 +192,11 @@ class Detect_Hedges:
         return status
 
 
-    def hedge_percentage(self, paragraph):
-        doc = self.nlp(paragraph)
+    def hedge_percentage(self, text: str, is_sentence = False) -> float:
+        doc = self.nlp_p(text)
         list_hedges = []
+        if is_sentence:
+            return float(self.isHedgedSentence(text))
         for i, sentence in enumerate(doc.sentences):
             list_hedges.append(self.isHedgedSentence(sentence.text))
         
